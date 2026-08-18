@@ -243,6 +243,16 @@ h2::before{content:'// ';color:var(--faint);white-space:pre}
 .note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:6px;padding:0 2px}
 .note b{color:var(--txt)}
 
+/* ---------- ZITAT & VERS ---------- */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;align-items:stretch}
+@media (max-width:339px){.duo{grid-template-columns:1fr}}
+.dcard{padding:11px 12px;min-height:168px;display:flex;flex-direction:column;
+  border-left:2px solid var(--dcol,var(--cyan));transition:border-color .5s}
+.dcard .lab{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:1.4px}
+.dcard .dtx{font-size:12.5px;font-weight:600;line-height:1.45;margin-top:6px;flex:1;color:var(--txt)}
+.dcard .dtx.long{font-size:11px}
+.dcard .dsrc{font-family:var(--mono);font-size:9px;color:var(--dim);text-align:right;margin-top:8px;letter-spacing:.5px}
+
 /* ---------- STATS ---------- */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:11px 4px;text-align:center}
@@ -423,19 +433,32 @@ body.boot .bootline{animation:bline .6s .15s ease-out forwards}
     <div class="drv" id="drive"></div>
   </section>
 
-  <h2>Heute erledigen — eins reicht<span class="prog" id="prog"></span></h2>
+  <h2>Heute erledigen — alle vier<span class="prog" id="prog"></span></h2>
   <button class="act" data-k="snipe"><span class="idx">01</span><span class="tx">Gesnipet<span class="sub">Gespeicherte Suche geprüft, 30-Sek-Check gemacht</span></span><span class="chk">OFFEN</span></button>
   <button class="act" data-k="offer"><span class="idx">02</span><span class="tx">Angebot rausgeschickt<span class="sub">Mindestens ein Preisvorschlag</span></span><span class="chk">OFFEN</span></button>
   <button class="act" data-k="list"><span class="idx">03</span><span class="tx">Teil gelistet<span class="sub">Tageslichtbild zuerst, Maße in cm</span></span><span class="chk">OFFEN</span></button>
   <button class="act" data-k="excel"><span class="idx">04</span><span class="tx">Excel aktualisiert<span class="sub">Excel ist die einzige Wahrheit für Zahlen</span></span><span class="chk">OFFEN</span></button>
 
-  <div class="note">Ein Eintrag genügt für den Tag. <b>Der Sieg ist, dass du auftauchst</b> — nicht wie lange.</div>
+  <div class="note">Der Tag zählt erst bei <b>4 / 4</b>. Gotham steht — oder es steht nicht.</div>
+
+  <div class="duo" id="duo">
+    <section class="panel dcard">
+      <div class="lab">ZITAT DES TAGES</div>
+      <div class="dtx" id="qt"></div>
+      <div class="dsrc" id="qs"></div>
+    </section>
+    <section class="panel dcard">
+      <div class="lab">VERS DES TAGES</div>
+      <div class="dtx" id="vt"></div>
+      <div class="dsrc" id="vs"></div>
+    </section>
+  </div>
 
   <div class="stats">
     <div class="stat"><div class="n" id="sBest">0</div><div class="l">Rekord</div></div>
     <div class="stat"><div class="n" id="sTotal">0</div><div class="l">Tage gesamt</div></div>
     <div class="stat"><div class="n" id="sWeek">0</div><div class="l">Diese Woche</div></div>
-    <div class="stat perf"><div class="n" id="sPerf">0</div><div class="l">Perfekte Tage</div></div>
+    <div class="stat perf"><div class="n" id="sActs">0</div><div class="l">Aktionen gesamt</div></div>
   </div>
 
   <h2>Letzte 4 Wochen</h2>
@@ -617,6 +640,212 @@ const DRIVE=[
   'Zeig auf. Das reicht.',
   'Es gibt keinen besseren Moment.'
 ];
+/* Zitat & Vers des Tages — je 100 Einträge, Rotation datumsbasiert */
+const ZITATE=[
+{a:"Cristiano Ronaldo",t:"Deine Liebe macht mich stark, dein Hass unaufhaltsam."},
+{a:"Michael Phelps",t:"Grenzen existieren nur in deinem Kopf."},
+{a:"David Goggins",t:"Bei 100 % Erschöpfung bist du erst bei 40 % deines Potenzials."},
+{a:"Arda Saatçi",t:"Disziplin bedeutet, das zu tun, was getan werden muss – auch ohne Lust."},
+{a:"Dean Graziosi",t:"Beständigkeit schlägt Intensität jedes einzelne Mal."},
+{a:"Dan Martell",t:"Bau das System, das dir deine Freiheit zurückgibt."},
+{a:"Arnold Schwarzenegger",t:"Es gibt keine Abkürzungen, nur Wiederholungen, Wiederholungen, Wiederholungen."},
+{a:"Kobe Bryant",t:"Harte Arbeit schlägt Talent, wenn Talent nicht hart arbeitet."},
+{a:"Alex Hormozi",t:"Sätze, die dein Leben verändern, beginnen meist mit der Arbeit, die du vermeidest."},
+{a:"Dwayne Johnson",t:"Sei der härteste Arbeiter im Raum."},
+{a:"Usain Bolt",t:"Ich habe Jahre trainiert, um 9 Sekunden zu laufen."},
+{a:"Tom Brady",t:"Wenn du nicht an dich glaubst, wer soll es sonst tun?"},
+{a:"Mike Tyson",t:"Disziplin ist, das zu tun, was du hasst, als ob du es liebst."},
+{a:"Muhammad Ali",t:"Zähle nicht die Tage, sorge dafür, dass die Tage zählen."},
+{a:"Michael Jordan",t:"Ich habe immer wieder versagt – genau deshalb war ich erfolgreich."},
+{a:"Ronnie Coleman",t:"Jeder will ein Bodybuilder sein, aber niemand will schwere Gewichte heben."},
+{a:"Jay Cutler",t:"Mach die Arbeit, wenn niemand hinschaut."},
+{a:"Chris Bumstead",t:"Der einzige Gegner im Spiegel bist du selbst."},
+{a:"Eric Thomas",t:"Wenn du Erfolg so sehr willst wie das Atmen, wirst du erfolgreich."},
+{a:"Les Brown",t:"Ziele auf den Mond. Selbst wenn du verfehlst, landest du bei den Sternen."},
+{a:"Steve Jobs",t:"Die Einzigen, die die Welt verändern, sind die, die glauben, es zu können."},
+{a:"Elon Musk",t:"Wenn etwas wichtig genug ist, tust du es, selbst wenn die Chancen gegen dich stehen."},
+{a:"Mark Cuban",t:"Schweiß schlägt Talent jedes Mal."},
+{a:"Gary Vaynerchuk",t:"Hör auf zu jammern und fang an zu kreieren."},
+{a:"Tony Robbins",t:"Echte Entscheidung misst sich am Handeln."},
+{a:"Jim Rohn",t:"Disziplin wiegt Unzen, Bedauern wiegt Tonnen."},
+{a:"Tim Ferriss",t:"Fokus ist das Neinsagen zu fast allem."},
+{a:"Naval Ravikant",t:"Ein gesunder Körper und ein klarer Geist müssen verdient werden."},
+{a:"Marcus Aurelius",t:"Was den Weg hindert, wird zum Weg."},
+{a:"Seneca",t:"Nicht weil es schwer ist, wagen wir es nicht, sondern weil wir es nicht wagen, ist es schwer."},
+{a:"Serena Williams",t:"Ich habe gelernt, aus jeder Niederlage stärkere Siege zu bauen."},
+{a:"LeBron James",t:"Druck macht Diamanten."},
+{a:"Novak Djokovic",t:"Der mentale Muskel muss genauso trainiert werden wie der Körper."},
+{a:"Conor McGregor",t:"Es gibt kein Talent. Es gibt nur harte Arbeit und Hingabe."},
+{a:"Khabib Nurmagomedov",t:"Du musst bereit sein, für deine Träume zu bluten."},
+{a:"Jon Jones",t:"Lass deinen Erfolg die Antwort auf alle Zweifel sein."},
+{a:"Georges St-Pierre",t:"Es geht nicht darum, wie hart du schlägst, sondern wie viel du einstecken kannst."},
+{a:"Rafael Nadal",t:"Du musst lernen zu leiden und den Prozess zu lieben."},
+{a:"Roger Federer",t:"Man muss durch schwere Zeiten gehen, um die besten zu erreichen."},
+{a:"Lewis Hamilton",t:"Du gewinnst nicht am Sonntag, sondern am Trainingstag."},
+{a:"Ayrton Senna",t:"Ich habe keine Schwächen, ich habe nur Bereiche, an denen ich arbeite."},
+{a:"Zlatan Ibrahimović",t:"Ich brauche keine Trophäen, um zu wissen, dass ich der Beste bin."},
+{a:"Lionel Messi",t:"Ich habe 17 Jahre gebraucht, um über Nacht erfolgreich zu werden."},
+{a:"Zinedine Zidane",t:"Jede Niederlage ist eine Lektion für den nächsten Sieg."},
+{a:"Jürgen Klopp",t:"Der Unterschied zwischen Erfolg und Misserfolg ist der Wille durchzuhalten."},
+{a:"Pep Guardiola",t:"Taktik ist wichtig, aber der Hunger im Herzen entscheidet."},
+{a:"Phil Heath",t:"Glaube an den Prozess, auch wenn das Ergebnis noch unsichtbar ist."},
+{a:"Dorian Yates",t:"Geduld und Beständigkeit brechen jeden Widerstand."},
+{a:"Lee Haney",t:"Stimulieren, nicht zerstören."},
+{a:"Frank Zane",t:"Fokus bringt das Wachstum, nicht die Masse allein."},
+{a:"Rich Piana",t:"Tu alles, was nötig ist."},
+{a:"Greg Plitt",t:"Der Unterschied zwischen dem, der du bist, und dem, der du sein willst, ist deine Tat."},
+{a:"Zyzz",t:"Wir werden alle Fortschritte machen."},
+{a:"Noel Deyzel",t:"Vergleiche dich nur mit der Person, die du gestern warst."},
+{a:"Larry Wheels",t:"Schwere Gewichte bauen nicht nur Muskeln, sondern Charakter."},
+{a:"Eddie Hall",t:"Schmerz ist vorübergehend, Stolz bleibt für immer."},
+{a:"Brian Shaw",t:"Stärke entsteht niemals in der Komfortzone."},
+{a:"Hafthor Björnsson",t:"Keine Ausreden, nur Ergebnisse."},
+{a:"Ray Dalio",t:"Schmerz plus Reflexion ergibt Fortschritt."},
+{a:"Jeff Bezos",t:"Deine Marke ist das, was die Leute über dich sagen, wenn du nicht im Raum bist."},
+{a:"Bill Gates",t:"Geduld ist ein Schlüsselelement des Erfolgs."},
+{a:"Warren Buffett",t:"Die beste Investition ist die in dich selbst."},
+{a:"Sam Altman",t:"Große Dinge entstehen durch langanhaltenden Fokus."},
+{a:"Peter Thiel",t:"Der beste Weg, die Zukunft vorherzusagen, ist, sie zu erschaffen."},
+{a:"Bedros Keuilian",t:"Keine Ausreden, nur Ergebnisse."},
+{a:"Andy Frisella",t:"Besiege deinen inneren Schweinehund jeden Tag aufs Neue."},
+{a:"Jocko Willink",t:"Disziplin bedeutet Freiheit."},
+{a:"Cameron Hanes",t:"Arbeite unerbittlich, wenn niemand zuschaut."},
+{a:"Rich Froning",t:"In den dunkelsten Momenten des Trainings entscheidet sich der Sieg."},
+{a:"Mat Fraser",t:"Harte Arbeit zahlt sich aus."},
+{a:"Tia-Clair Toomey",t:"Vertraue dem Training, auch wenn es brennt."},
+{a:"Eliud Kipchoge",t:"Kein Mensch hat Grenzen."},
+{a:"Mo Farah",t:"Hartes Training verzeiht keine Nachlässigkeit."},
+{a:"Wim Hof",t:"Die Kälte ist eine ehrliche Lehrerin."},
+{a:"Bruce Lee",t:"Fürchte nicht den Mann, der 10.000 Kicks geübt hat, sondern den, der einen Kick 10.000 Mal geübt hat."},
+{a:"Chuck Norris",t:"Wahrer Geist zeigt sich in der Widerstandskraft."},
+{a:"Jean-Claude Van Damme",t:"Glaube an deine Vision, egal was die Welt sagt."},
+{a:"Sylvester Stallone",t:"Es geht darum, wie viele Schläge du einstecken und weitermachen kannst."},
+{a:"Jason Statham",t:"Erfolg ist das Produkt ständiger Vorbereitung."},
+{a:"Mark Wahlberg",t:"Steh früh auf und mach die Arbeit, bevor der Tag beginnt."},
+{a:"Will Smith",t:"Wenn du nicht bereit bist hart zu arbeiten, wird es jemand anderes tun."},
+{a:"Denzel Washington",t:"Ohne Verpflichtung fängst du nie an, ohne Beständigkeit beendest du nie."},
+{a:"Keanu Reeves",t:"Jede Hürde formt deine innere Stärke."},
+{a:"Tom Hardy",t:"Verwandle deine Wut in Fokus auf deine Ziele."},
+{a:"Henry Cavill",t:"Konsequentes Training bringt mehr als spontane Höchstleistungen."},
+{a:"Patrick Bet-David",t:"Die Fähigkeit zu leiden ist eine Superkraft im Business."},
+{a:"Tom Bilyeu",t:"Baue deine Fähigkeiten auf, bis du unignorierbar bist."},
+{a:"Ed Mylett",t:"Du bist nur eine Entscheidung von einem völlig anderen Leben entfernt."},
+{a:"Lewis Howes",t:"Großartigkeit beginnt mit dem Mut, unperfekt anzufangen."},
+{a:"Mel Robbins",t:"Zähle abwärts von 5 und handle sofort."},
+{a:"Chris Williamson",t:"Fokus ist das Gegenmittel zur Überforderung."},
+{a:"Steven Bartlett",t:"Erfolg ist die Summe kleiner, täglicher Siege."},
+{a:"Iman Gadzhi",t:"Fokus auf die Grundlagen bringt langfristigen Erfolg."},
+{a:"Luke Belmar",t:"Meistere deinen Geist, deinen Körper und deine Finanzen."},
+{a:"Markus Rühl",t:"Muss net schmecke, muss wirke."},
+{a:"Urs Kalecinski",t:"Ein Vermächtnis wird Satz für Satz gebaut."},
+{a:"Johannes Luckas",t:"Kompakt bleiben und durchziehen."},
+{a:"Sascha Huber",t:"Gemeinsam kämpfen, gemeinsam siegen."},
+{a:"David Laid",t:"Transformation beginnt in dem Moment, in dem du nicht aufgibst."},
+{a:"Sam Sulek",t:"Mach einfach den Satz, egal wie du dich fühlst."}
+];
+const VERSE=[
+{a:"Josua",r:"Josua 1,9",t:"Sei mutig und stark! Fürchte dich nicht, denn der HERR, dein Gott, ist mit dir."},
+{a:"Apostel Paulus",r:"Philipper 4,13",t:"Alles vermag ich durch den, der mich stärkt."},
+{a:"König David",r:"Psalm 23,1",t:"Der HERR ist mein Hirte, mir wird nichts mangeln."},
+{a:"Prophet Jesaja",r:"Jesaja 40,31",t:"Die auf den HERRN harren, kriegen neue Kraft, dass sie auffahren mit Flügeln wie Adler."},
+{a:"Psalmist",r:"Psalm 46,2",t:"Gott ist unsere Zuflucht und Stärke, eine Hilfe in den schweren Zeiten."},
+{a:"König Salomo",r:"Sprüche 3,5",t:"Vertraue auf den HERRN von ganzem Herzen und verlass dich nicht auf deinen Verstand."},
+{a:"Apostel Paulus",r:"2. Timotheus 1,7",t:"Gott hat uns nicht einen Geist der Furcht gegeben, sondern der Kraft, der Liebe und der Besonnenheit."},
+{a:"Jesus Christus",r:"Matthäus 19,26",t:"Für Menschen ist das unmöglich, für Gott aber ist alles möglich."},
+{a:"Prophet Jeremia",r:"Jeremia 29,11",t:"Ich kenne die Pläne, die ich für euch habe: Pläne des Friedens und nicht des Unheils."},
+{a:"König David",r:"Psalm 118,14",t:"Der HERR ist meine Stärke und mein Psalm und ist mein Heil."},
+{a:"Apostel Paulus",r:"Römer 8,31",t:"Ist Gott für uns, wer kann dann gegen uns sein?"},
+{a:"Apostel Paulus",r:"1. Korinther 16,13",t:"Seid wachsam, steht fest im Glauben, seid mutig, seid stark!"},
+{a:"König Salomo",r:"Sprüche 24,16",t:"Denn der Gerechte fällt siebenmal und steht doch wieder auf."},
+{a:"Jesus Christus",r:"Markus 9,23",t:"Alle Dinge sind möglich dem, der glaubt."},
+{a:"Prophet Jesaja",r:"Jesaja 41,10",t:"Fürchte dich nicht, denn ich bin mit dir; weiche nicht, denn ich bin dein Gott."},
+{a:"König David",r:"Psalm 18,30",t:"Mit meinem Gott kann ich über Mauern springen."},
+{a:"Apostel Paulus",r:"Galater 6,9",t:"Lasst uns nicht müde werden, Gutes zu tun; denn zu seiner Zeit werden wir ernten."},
+{a:"Apostel Paulus",r:"Römer 12,12",t:"Seid fröhlich in der Hoffnung, geduldig in der Bedrängnis, beharrlich im Gebet!"},
+{a:"Jesus Christus",r:"Johannes 16,33",t:"In der Welt habt ihr Angst; aber seid getrost, ich habe die Welt überwunden."},
+{a:"König David",r:"Psalm 27,1",t:"Der HERR ist mein Licht und mein Heil: Vor wem sollte ich mich fürchten?"},
+{a:"König Salomo",r:"Sprüche 4,23",t:"Mehr als alles bewahre dein Herz; denn von ihm geht das Leben aus."},
+{a:"Apostel Paulus",r:"2. Korinther 12,9",t:"Meine Gnade genügt dir; denn meine Kraft vollendet sich in der Schwachheit."},
+{a:"Jesus Christus",r:"Matthäus 7,7",t:"Bittet, so wird euch gegeben; sucht, so werdet ihr finden; klopft an, so wird euch aufgetan."},
+{a:"Psalmist",r:"Psalm 121,1-2",t:"Meine Hilfe kommt vom HERRN, der Himmel und Erde gemacht hat."},
+{a:"König Salomo",r:"Sprüche 16,3",t:"Befiehl dem HERRN deine Werke, so werden deine Pläne gelingen."},
+{a:"Mose",r:"Deuteronomium 31,6",t:"Seid stark und mutig! Fürchtet euch nicht, denn der HERR geht mit euch."},
+{a:"Apostel Paulus",r:"Kolosser 3,23",t:"Was immer ihr tut, tut es von Herzen als dem HERRN und nicht den Menschen."},
+{a:"Nehemia",r:"Nehemia 8,10",t:"Die Freude am HERRN ist eure Stärke."},
+{a:"Prophet Jesaja",r:"Jesaja 12,2",t:"Gott ist mein Heil; ich bin voll Vertrauen und fürchte mich nicht."},
+{a:"Jesus Christus",r:"Matthäus 5,14",t:"Ihr seid das Licht der Welt. Eine Stadt auf dem Berge kann nicht verborgen bleiben."},
+{a:"König David",r:"Psalm 37,5",t:"Befiehl dem HERRN deinen Weg und hoffe auf ihn, er wird es wohlmachen."},
+{a:"Apostel Paulus",r:"Römer 8,28",t:"Wir wissen, dass denen, die Gott lieben, alle Dinge zum Besten dienen."},
+{a:"König Salomo",r:"Sprüche 27,17",t:"Eisen schärft Eisen, so schärft ein Mann den anderen."},
+{a:"Jesus Christus",r:"Matthäus 6,33",t:"Sucht zuerst das Reich Gottes, so wird euch das alles zufallen."},
+{a:"König David",r:"Psalm 31,25",t:"Seid getrost und unverzagt alle, die ihr auf den HERRN harret!"},
+{a:"Apostel Paulus",r:"1. Korinther 9,24",t:"Lauft so, dass ihr den Preis erlangt."},
+{a:"Apostel Paulus",r:"2. Timotheus 4,7",t:"Ich habe den guten Kampf gekämpft, den Lauf vollendet, den Glauben bewahrt."},
+{a:"Prophet Jesaja",r:"Jesaja 43,1",t:"Fürchte dich nicht, denn ich habe dich erlöst; ich habe dich bei deinem Namen gerufen."},
+{a:"König David",r:"Psalm 139,14",t:"Ich danke dir dafür, dass ich wunderbar gemacht bin."},
+{a:"Apostel Petrus",r:"1. Petrus 5,7",t:"Alle eure Sorge werft auf ihn; denn er sorgt für euch."},
+{a:"König Salomo",r:"Sprüche 18,10",t:"Der Name des HERRN ist eine feste Burg; der Gerechte läuft dorthin und ist geschützt."},
+{a:"Apostel Paulus",r:"1. Korinther 13,13",t:"Nun aber bleiben Glaube, Hoffnung, Liebe, diese drei; die Liebe ist die größte unter ihnen."},
+{a:"Jesus Christus",r:"Johannes 14,27",t:"Euer Herz erschrecke nicht und fürchte sich nicht."},
+{a:"Psalmist",r:"Psalm 91,11",t:"Denn er hat seinen Engeln befohlen über dir, dass sie dich behüten auf allen deinen Wegen."},
+{a:"König Salomo",r:"Prediger 3,1",t:"Alles hat seine Stunde, und jedes Geschehen unter dem Himmel hat seine Zeit."},
+{a:"Apostel Paulus",r:"Epheser 6,10",t:"Seid stark in dem HERRN und in der Macht seiner Stärke!"},
+{a:"Mose",r:"Exodus 14,14",t:"Der HERR wird für euch kämpfen, ihr aber werdet stille sein."},
+{a:"König David",r:"Psalm 34,9",t:"Schmecket und sehet, wie freundlich der HERR ist; wohl dem, der auf ihn traut!"},
+{a:"Apostel Paulus",r:"Römer 15,13",t:"Der Gott der Hoffnung erfülle euch mit aller Freude und Frieden im Glauben."},
+{a:"Jesus Christus",r:"Matthäus 11,28",t:"Kommt her zu mir alle, die ihr mühselig und beladen seid; ich will euch erquicken."},
+{a:"König Salomo",r:"Sprüche 21,31",t:"Das Ross wird gerüstet für den Tag der Schlacht, aber der Sieg kommt vom HERRN."},
+{a:"Psalmist",r:"Psalm 119,105",t:"Dein Wort ist meines Fußes Leuchte und ein Licht auf meinem Wege."},
+{a:"Apostel Paulus",r:"2. Korinther 5,7",t:"Denn wir wandeln im Glauben und nicht im Schauen."},
+{a:"Prophet Jesaja",r:"Jesaja 54,17",t:"Keiner Waffe, die gegen dich geschmiedet wird, soll es gelingen."},
+{a:"Apostel Paulus",r:"Philipper 4,6",t:"Sorgt euch um nichts, sondern in allen Dingen lasst eure Bitten im Gebet kundwerden!"},
+{a:"König David",r:"Psalm 62,6",t:"Nur bei Gott kommt meine Seele zur Ruhe; von ihm kommt meine Hoffnung."},
+{a:"Apostel Jakobus",r:"Jakobus 1,12",t:"Selig ist der Mann, der die Anfechtung erduldet und die Krone des Lebens empfängt."},
+{a:"Prophet Jeremia",r:"Klagelieder 3,22-23",t:"Die Güte des HERRN ist nicht zu Ende; sein Erbarmen ist alle Morgen neu."},
+{a:"Hebräerbrief",r:"Hebräer 11,1",t:"Der Glaube ist ein Feststehen in dem, was man erhofft, ein Überzeugtsein von Unsichtbarem."},
+{a:"König David",r:"Psalm 103,2",t:"Lobe den HERRN, meine Seele, und vergiss nicht, was er dir Gutes getan hat!"},
+{a:"König Salomo",r:"Sprüche 17,22",t:"Ein fröhliches Herz tut dem Körper gut, aber ein zerschlagener Geist dörrt die Knochen."},
+{a:"Jesus Christus",r:"Johannes 8,12",t:"Ich bin das Licht der Welt. Wer mir nachfolgt, wird nicht in der Finsternis wandeln."},
+{a:"Apostel Paulus",r:"1. Korinther 15,58",t:"Seid fest, unerschütterlich, und nehmt immer zu in dem Werk des HERRN!"},
+{a:"König David",r:"Psalm 144,1",t:"Gelobt sei der HERR, mein Fels, der meine Hände kämpfen lehrt."},
+{a:"Prophet Jesaja",r:"Jesaja 26,3",t:"Dem Festen bewahrst du Frieden, weil er auf dich vertraut."},
+{a:"König Salomo",r:"Sprüche 14,23",t:"Jede harte Arbeit bringt Gewinn, aber bloßes Gerede führt zu Mangel."},
+{a:"Apostel Paulus",r:"Römer 5,3-4",t:"Bedrängnis bewirkt Geduld, Geduld aber Bewährung, Bewährung aber Hoffnung."},
+{a:"König David",r:"Psalm 118,24",t:"Dies ist der Tag, den der HERR macht; lasst uns freuen und fröhlich an ihm sein!"},
+{a:"Jesus Christus",r:"Matthäus 5,16",t:"So soll euer Licht vor den Menschen leuchten, damit sie eure guten Werke sehen."},
+{a:"König Salomo",r:"Sprüche 15,22",t:"Pläne scheitern ohne Beratung; wo aber viele Ratgeber sind, kommen sie zustande."},
+{a:"Apostel Paulus",r:"1. Thessalonicher 5,16-18",t:"Seid allezeit fröhlich, betet ohne Unterlass, seid dankbar in allen Dingen!"},
+{a:"König David",r:"Psalm 28,7",t:"Der HERR ist meine Stärke und mein Schild; auf ihn hat mein Herz vertraut."},
+{a:"Mose",r:"Deuteronomium 20,4",t:"Denn der HERR, euer Gott, geht mit euch, um für euch zu kämpfen."},
+{a:"Apostel Paulus",r:"Philipper 3,14",t:"Ich jage nach dem Ziel, dem Siegespreis der himmlischen Berufung."},
+{a:"Apostel Jakobus",r:"Jakobus 4,8",t:"Naht euch Gott, so naht er sich euch."},
+{a:"König David",r:"Psalm 16,8",t:"Ich habe den HERRN allezeit vor Augen; weil er zu meiner Rechten ist, wanke ich nicht."},
+{a:"König Salomo",r:"Sprüche 10,4",t:"Lässige Hand macht arm, aber die Hand der Fleißigen macht reich."},
+{a:"Apostel Paulus",r:"Galater 5,1",t:"Zur Freiheit hat uns Christus befreit. So steht nun fest!"},
+{a:"Prophet Jesaja",r:"Jesaja 40,29",t:"Er gibt dem Müden Kraft und Stärke dem Unvermögenden."},
+{a:"Erzengel Gabriel",r:"Lukas 1,37",t:"Denn bei Gott ist kein Ding unmöglich."},
+{a:"König David",r:"Psalm 138,3",t:"An dem Tag, da ich rief, hast du mir geantwortet und meiner Seele Kraft verliehen."},
+{a:"Apostel Paulus",r:"2. Korinther 4,16",t:"Darum werden wir nicht müde; unser innerer Mensch wird von Tag zu Tag erneuert."},
+{a:"König Salomo",r:"Sprüche 16,9",t:"Des Menschen Herz erdenkt sich seinen Weg; aber der HERR allein lenkt seinen Schritt."},
+{a:"Apostel Petrus",r:"1. Petrus 5,8-9",t:"Seid nüchtern und wacht! Steht dem Feind fest im Glauben entgegen!"},
+{a:"Apostel Paulus",r:"Epheser 3,20",t:"Gott kann unendlich viel mehr tun, als wir bitten oder verstehen."},
+{a:"Psalmist",r:"Psalm 42,12",t:"Was betrübst du dich, meine Seele? Harre auf Gott; denn ich werde ihm noch danken!"},
+{a:"König Salomo",r:"Prediger 4,12",t:"Eine dreifache Schnur reißt nicht so leicht entzwei."},
+{a:"Jesus Christus",r:"Johannes 15,5",t:"Wer in mir bleibt und ich in ihm, der bringt viel Frucht."},
+{a:"Apostel Paulus",r:"Römer 12,21",t:"Lass dich nicht vom Bösen überwinden, sondern überwinde das Böse mit Gutem!"},
+{a:"Psalmist",r:"Psalm 112,7",t:"Vor böser Kunde fürchtet er sich nicht; sein Herz ist getrost und vertraut auf den HERRN."},
+{a:"Prophet Jesaja",r:"Jesaja 55,11",t:"Mein Wort kehrt nicht leer zu mir zurück, sondern führt aus, was mir gefällt."},
+{a:"Hebräerbrief",r:"Hebräer 12,1-2",t:"Lasst uns mit Ausdauer laufen in dem Kampf, der vor uns liegt, und aufsehen zu Jesus."},
+{a:"König Salomo",r:"Sprüche 13,4",t:"Der Faule begehrt und bekommt nichts, aber die Fleißigen werden reich gesättigt."},
+{a:"Psalmist",r:"Psalm 147,3",t:"Er heilt, die zerbrochenen Herzens sind, und verbindet ihre Wunden."},
+{a:"Apostel Paulus",r:"2. Timotheus 2,15",t:"Bemühe dich darum, dich vor Gott als ein bewährter Arbeiter zu erweisen."},
+{a:"Jesus Christus",r:"Matthäus 17,20",t:"Wenn ihr Glauben habt wie ein Senfkorn, werdet ihr Berge versetzen."},
+{a:"König David",r:"Psalm 20,8",t:"Jene verlassen sich auf Wagen und Rosse, wir aber denken an den Namen unseres Gottes."},
+{a:"Apostel Paulus",r:"Kolosser 3,12",t:"Zieht an als Auserwählte Gottes: herzliches Erbarmen, Freundlichkeit, Demut und Geduld!"},
+{a:"König Salomo",r:"Sprüche 28,1",t:"Der Gottlose flieht, auch wenn niemand jagt; der Gerechte aber ist getrost wie ein Löwe."},
+{a:"Jesus Christus",r:"Offenbarung 2,10",t:"Sei getreu bis in den Tod, so werde ich dir die Krone des Lebens geben."}
+];
+
 /* Gotham-Stufennamen (Anzeige unter der Skyline) */
 const GOTHAM=['ZERSTÖRT','WIEDERAUFBAU','FORTSCHRITT','FAST VOLLSTÄNDIG','KOMPLETT'];
 
@@ -634,6 +863,12 @@ function load(){
     s.start=ks.length?ks[0]:iso(new Date());
     save(s);
   }
+  /* Migration 4/4-Regel: Tage vor diesem Datum gelten nach der alten
+     Regel (eine Aktion genügt), ab diesem Datum zählen nur 4/4-Tage. */
+  if(!s.rule4Since){
+    s.rule4Since=iso(new Date());
+    save(s);
+  }
   return s;
 }
 function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
@@ -642,12 +877,19 @@ let S=load();
 const today=()=>iso(new Date());
 const $=id=>document.getElementById(id);
 
-function dayDone(k){const d=S.days[k];return !!(d&&ACTS.some(a=>d[a]))}
+/* Tag gesichert: vor rule4Since genügt eine Aktion (Bestandsschutz),
+   ab rule4Since müssen alle vier erfasst sein. */
+function dayDone(k){
+  const d=S.days[k];if(!d)return false;
+  if(S.rule4Since&&k<S.rule4Since)return ACTS.some(a=>d[a]);
+  return ACTS.every(a=>d[a]);
+}
 /* Perfekter Tag: alle vier Aktionen erfasst (aus den Tages-Flags abgeleitet,
    gilt damit auch rückwirkend für alte Daten) */
 function dayPerfect(k){const d=S.days[k];return !!(d&&ACTS.every(a=>d[a]))}
 function perfCount(){return Object.keys(S.days).filter(dayPerfect).length}
 function todayCount(){const d=S.days[today()]||{};return ACTS.filter(a=>d[a]).length}
+function totalActs(){let n=0;for(const k in S.days){const d=S.days[k];for(const a of ACTS)if(d[a])n++}return n}
 
 /* Streak: zählt rückwärts ab heute (heute offen = gestern zählt weiter) */
 function streak(){
@@ -689,9 +931,9 @@ const FACE={
   night:{s:'STATUS: FENSTER GESCHLOSSEN',t:['FENSTER GESCHLOSSEN — DER TAG LÄUFT NOCH BIS 24:00.','FALLS NOCH WACH: EIN EINTRAG GEHT. SONST: MORGEN FRÜHER.']}
 };
 const CONFIRM=[
-  n=>`EINTRAG GESPEICHERT. TAG ${n} GESICHERT.`,
-  n=>`PROTOKOLL AKTUALISIERT. SERIE: ${n} ${n===1?'TAG':'TAGE'}.`,
-  n=>`ERFASST. STREAK ${n} BESTÄTIGT.`
+  c=>`EINTRAG GESPEICHERT. ${c}/4 ERFASST.`,
+  c=>`PROTOKOLL AKTUALISIERT. ${c}/4 ERFASST.`,
+  c=>`ERFASST. NOCH ${4-c} BIS GESICHERT.`
 ];
 let confirmIdx=0,fbTimer=null;
 
@@ -702,7 +944,10 @@ function render(){
   $('hero').className='hero panel s-'+st;
   $('num').textContent=n;
   $('lbl').textContent=(n===1?'TAG':'TAGE')+' STREAK';
-  $('stTag').textContent=FACE[st].s;
+  // Status nach Anzahl: 4/4 gesichert · 1-3/4 nicht gesichert · 0/4 offen
+  const gc0=todayCount();
+  $('stTag').textContent=gc0===4?'STATUS: GESICHERT':(gc0>0?'STATUS: NICHT GESICHERT — '+gc0+'/4 ERFASST':'STATUS: OFFEN');
+  $('stTag').style.color='var(--gotham-'+gc0+')';
   $('speech').textContent=pick(FACE[st].t);
 
   // 4.1 Risiko: nur wenn Tag offen und Streak > 0
@@ -718,6 +963,16 @@ function render(){
   const gc=todayCount();
   $('sky').setAttribute('class','g'+gc);
   $('mlab').textContent='GOTHAM // '+GOTHAM[gc];
+
+  // Zitat & Vers des Tages (deterministisch, gleiches Datum = gleiches Paar)
+  const q=ZITATE[dn%ZITATE.length],v=VERSE[(dn*37)%VERSE.length];
+  $('qt').textContent='„'+q.t+'“';
+  $('qt').classList.toggle('long',q.t.length>95);
+  $('qs').textContent='— '+q.a;
+  $('vt').textContent='„'+v.t+'“';
+  $('vt').classList.toggle('long',v.t.length>95);
+  $('vs').textContent='— '+v.a+' · '+v.r;
+  $('duo').style.setProperty('--dcol','var(--gotham-'+gc+')');
 
   // 4.3 Tage seit Neustart (17.08.2026 = TAG 1)
   const since=Math.max(1,dayNum(new Date())-dayNum(new Date(RESTART+'T12:00:00'))+1);
@@ -749,7 +1004,7 @@ function render(){
   $('sTotal').textContent=Object.keys(S.days).filter(dayDone).length;
   let w=0;for(let i=0;i<7;i++){const dd=addDays(now,i-dow);if(dd<=now&&dayDone(iso(dd)))w++}
   $('sWeek').textContent=w;
-  $('sPerf').textContent=perfCount();
+  $('sActs').textContent=totalActs();
 
   // Historie 28 Tage: verpasste Tage seit erstem Nutzungstag rot
   const g=$('grid');g.innerHTML='';
@@ -796,8 +1051,7 @@ function countdown(){
 function feedback(){
   const hero=$('hero');
   hero.classList.remove('fx');void hero.offsetWidth;hero.classList.add('fx');
-  const n=streak();
-  $('speech').textContent=CONFIRM[confirmIdx++%CONFIRM.length](n);
+  $('speech').textContent=CONFIRM[confirmIdx++%CONFIRM.length](todayCount());
   clearTimeout(fbTimer);
   fbTimer=setTimeout(render,2500);
 }
@@ -933,20 +1187,16 @@ document.querySelectorAll('.act').forEach(b=>{
   b.addEventListener('click',()=>{
     const k=today();S.days[k]=S.days[k]||{};
     const setting=!S.days[k][b.dataset.k];
-    const wasDone=dayDone(k);
     S.days[k][b.dataset.k]=setting;
     save(S);
     if(!setting){render();return}
     if(navigator.vibrate)navigator.vibrate(18);
-    const col=getComputedStyle(document.documentElement).getPropertyValue('--gotham-'+todayCount()).trim();
-    if(dayPerfect(k)){
-      // vierter Haken: Jagd, danach die grosse Sequenz (unverändert)
-      render();
-      chase({col});
+    const cnt=todayCount();
+    const col=getComputedStyle(document.documentElement).getPropertyValue('--gotham-'+cnt).trim();
+    if(cnt===4){
+      // vierter Haken = Tag gesichert: Wechsel unter der Jagd, danach die grosse Sequenz
+      chase({col,mid:render});
       setTimeout(()=>perfectFx(perfCount()),reducedMotion()?0:1250);
-    }else if(!wasDone){
-      // erster Haken: die Szene trägt den Statuswechsel
-      chase({col,mid:()=>{render();feedback()}});
     }else{
       render();feedback();
       chase({col});
@@ -969,7 +1219,7 @@ function endPfx(){
   document.body.classList.remove('pfx');
   setTimeout(()=>{if(!pfxOn)p.style.display='none'},350);
   // Kachel zählt sichtbar hoch
-  const el=$('sPerf'),target=perfCount();
+  const el=$('sActs'),target=totalActs();
   el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');
   if(!reducedMotion()&&target>0){
     let t0=null;const dur=600;
