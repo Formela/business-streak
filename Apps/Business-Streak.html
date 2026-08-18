@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Streak">
+<meta name="theme-color" content="#0a0a0c">
+<title>Business Streak</title>
+<style>
+:root{
+  --bg:#0a0a0c; --card:#141419; --card2:#1c1c23; --line:#2a2a33;
+  --txt:#f2f2f5; --dim:#8a8a99; --acc:#ff6b1a; --acc2:#ffb020;
+  --ok:#28c76f; --warn:#ff9f43; --bad:#ea5455;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:520px;margin:0 auto;padding:18px 16px 60px}
+
+/* ---------- STREAK-KARTE (das Widget-Gefühl) ---------- */
+.hero{
+  border-radius:22px;padding:22px;margin-bottom:16px;position:relative;overflow:hidden;
+  transition:background .6s ease;
+}
+.hero.s-done{background:linear-gradient(135deg,#ff6b1a,#ff9021)}
+.hero.s-early{background:linear-gradient(135deg,#1e2a4a,#28304d)}
+.hero.s-mid{background:linear-gradient(135deg,#4a3a1e,#5d4620)}
+.hero.s-late{background:linear-gradient(135deg,#5d2a1e,#7a3020)}
+.hero.s-crit{background:linear-gradient(135deg,#7a1e1e,#a02020);animation:pulse 2s infinite}
+.hero.s-night{background:linear-gradient(135deg,#222,#2e2e35)}
+@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+
+.streak-num{font-size:64px;font-weight:800;line-height:1;letter-spacing:-2px;display:flex;align-items:center;gap:10px}
+.streak-lbl{font-size:15px;opacity:.9;margin-top:4px;font-weight:600}
+.mascot{position:absolute;right:16px;bottom:14px;font-size:58px;line-height:1;transition:transform .3s}
+.hero.s-crit .mascot{animation:shake .4s infinite}
+@keyframes shake{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.speech{font-size:14px;font-weight:600;margin-top:12px;max-width:62%;opacity:.95;line-height:1.35}
+
+/* Wochenleiste */
+.week{display:flex;gap:6px;margin-top:16px}
+.day{flex:1;text-align:center}
+.day .d{font-size:10px;opacity:.75;margin-bottom:4px;font-weight:600}
+.day .dot{height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.16);font-size:13px;font-weight:700}
+.day .dot.on{background:rgba(255,255,255,.92);color:#111}
+.day .dot.today{outline:2px solid rgba(255,255,255,.85)}
+
+/* ---------- COUNTDOWN ---------- */
+.count{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;
+}
+.count.hot{border-color:var(--acc);background:#1d1410}
+.count.crit{border-color:var(--bad);background:#241214}
+.count.calm{opacity:.75}
+.count .lab{font-size:12px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.count .val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+.count.hot .val{color:var(--acc2)}
+.count.crit .val{color:var(--bad)}
+
+/* ---------- AKTIONEN ---------- */
+h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:22px 0 10px;font-weight:700}
+.act{
+  width:100%;background:var(--card);border:1px solid var(--line);color:var(--txt);
+  border-radius:14px;padding:17px 16px;margin-bottom:10px;font-size:15px;font-weight:600;
+  min-height:62px;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;
+  transition:.15s;font-family:inherit;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+}
+.act:active{transform:scale(.985)}
+.act .ic{font-size:21px;width:26px;text-align:center;flex-shrink:0}
+.act .tx{flex:1}
+.act .sub{display:block;font-size:12px;color:var(--dim);font-weight:500;margin-top:2px}
+.act.done{background:#10281a;border-color:#1e5c38}
+.act.done .tx{text-decoration:line-through;opacity:.65}
+.act .chk{font-size:18px;opacity:0}
+.act.done .chk{opacity:1}
+
+.note{font-size:12.5px;color:var(--dim);line-height:1.5;margin-top:8px;padding:0 2px}
+
+/* ---------- STATS ---------- */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 10px;text-align:center}
+.stat .n{font-size:22px;font-weight:800}
+.stat .l{font-size:10.5px;color:var(--dim);margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+
+/* ---------- HISTORIE ---------- */
+.hist{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(14,1fr);gap:4px}
+.cell{aspect-ratio:1;border-radius:4px;background:var(--card2)}
+.cell.on{background:var(--acc)}
+.cell.miss{background:#3a2226}
+
+.foot{text-align:center;color:var(--dim);font-size:11.5px;margin-top:26px;line-height:1.6}
+.reset{background:none;border:none;color:#4a4a55;font-size:11px;text-decoration:underline;cursor:pointer;font-family:inherit;margin-top:10px;padding:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero" id="hero">
+    <div class="streak-num"><span id="flame">🔥</span><span id="num">0</span></div>
+    <div class="streak-lbl" id="lbl">Tage Streak</div>
+    <div class="speech" id="speech">Los geht's.</div>
+    <div class="mascot" id="mascot">🦇</div>
+    <div class="week" id="week"></div>
+  </div>
+
+  <div class="count" id="count">
+    <div>
+      <div class="lab" id="countLab">Zeit bis Mitternacht</div>
+      <div class="val" id="countVal">--:--:--</div>
+    </div>
+    <div style="font-size:30px" id="countIcon">⏳</div>
+  </div>
+
+  <h2>Heute erledigen — eins reicht</h2>
+  <button class="act" data-k="snipe"><span class="ic">🔍</span><span class="tx">Gesnipet<span class="sub">Gespeicherte Suche geprüft, 30-Sek-Check gemacht</span></span><span class="chk">✅</span></button>
+  <button class="act" data-k="offer"><span class="ic">💬</span><span class="tx">Angebot rausgeschickt<span class="sub">Mindestens ein Preisvorschlag</span></span><span class="chk">✅</span></button>
+  <button class="act" data-k="list"><span class="ic">📸</span><span class="tx">Teil gelistet<span class="sub">Tageslichtbild zuerst, Maße in cm</span></span><span class="chk">✅</span></button>
+  <button class="act" data-k="excel"><span class="ic">📊</span><span class="tx">Excel aktualisiert<span class="sub">Excel ist die einzige Wahrheit für Zahlen</span></span><span class="chk">✅</span></button>
+
+  <div class="note">Ein Haken genügt für den Tag. <b>Der Sieg ist, dass du auftauchst</b> — nicht wie lange.</div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="sBest">0</div><div class="l">Rekord</div></div>
+    <div class="stat"><div class="n" id="sTotal">0</div><div class="l">Tage gesamt</div></div>
+    <div class="stat"><div class="n" id="sWeek">0</div><div class="l">Diese Woche</div></div>
+  </div>
+
+  <h2>Letzte 4 Wochen</h2>
+  <div class="hist"><div class="grid" id="grid"></div></div>
+
+  <div class="foot">
+    „Ich habe kein Disziplin-Problem.<br>Ich habe ein Struktur-Problem."<br>
+    <span style="opacity:.6">Struktur zuerst, Mindset folgt.</span><br>
+    <button class="reset" id="reset">Alles zurücksetzen</button>
+  </div>
+</div>
+
+<script>
+const KEY='vv_business_streak_v1';
+const ACTS=['snipe','offer','list','excel'];
+
+function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+
+/* Laden + Migration: alte Struktur {days:{}} bleibt gültig,
+   neu ist nur das Feld "start" (erster Nutzungstag) für die Historie. */
+function load(){
+  let s;
+  try{s=JSON.parse(localStorage.getItem(KEY))||{days:{}}}catch(e){s={days:{}}}
+  if(!s.days)s.days={};
+  if(!s.start){
+    const ks=Object.keys(s.days).sort();
+    s.start=ks.length?ks[0]:iso(new Date());
+    save(s);
+  }
+  return s;
+}
+function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
+
+let S=load();
+const today=()=>iso(new Date());
+
+function dayDone(k){const d=S.days[k];return !!(d&&ACTS.some(a=>d[a]))}
+
+/* Streak: zählt rückwärts ab heute (heute offen = gestern zählt weiter) */
+function streak(){
+  let n=0,cur=new Date();
+  if(!dayDone(iso(cur))) cur=addDays(cur,-1);
+  while(dayDone(iso(cur))){n++;cur=addDays(cur,-1)}
+  return n;
+}
+function best(){
+  const ks=Object.keys(S.days).filter(dayDone).sort();
+  if(!ks.length)return 0;
+  let mx=1,run=1;
+  for(let i=1;i<ks.length;i++){
+    const prev=addDays(new Date(ks[i]),-1);
+    if(iso(prev)===ks[i-1]){run++;mx=Math.max(mx,run)}else run=1;
+  }
+  return mx;
+}
+
+/* Stufen: Eskalation NUR im Fenster bis 21 Uhr (Bettzeit 21:15).
+   Höhepunkt 20–21, ab 21 Uhr Ruhemodus — der Tag zählt trotzdem bis 24:00. */
+function stage(){
+  if(dayDone(today()))return'done';
+  const h=new Date().getHours()+new Date().getMinutes()/60;
+  if(h<17)return'early';
+  if(h<19)return'mid';
+  if(h<20)return'late';
+  if(h<21)return'crit';
+  return'night';
+}
+const FACE={
+  done:{m:'🦇',t:['Erledigt. Genau so.','Aufgetaucht. Das zählt.','Heute gehalten.']},
+  early:{m:'🦇',t:['Der Tag gehört dir. Ein Klick reicht.','Noch viel Zeit — nutz sie früh.']},
+  mid:{m:'👀',t:['Noch nichts heute. Fünf Minuten würden reichen.','Ich warte.']},
+  late:{m:'😐',t:['Dein Fenster läuft: 19–21. Eine Aktion.','Die Uhr interessiert sich nicht für Ausreden.']},
+  crit:{m:'😠',t:['LETZTE STUNDE vor Ruhezeit. Jetzt.','Ein Haken. Fünf Minuten. Los.','Du weißt genau, was zu tun ist.']},
+  night:{m:'😴',t:['Ruhemodus. Der Tag zählt noch bis 24:00 — ohne Alarm.','Wenn du eh noch wach bist: ein Haken geht schnell. Sonst: morgen früher.']}
+};
+
+function pick(a){return a[new Date().getDate()%a.length]}
+
+function render(){
+  const st=stage(),n=streak();
+  const hero=document.getElementById('hero');
+  hero.className='hero s-'+st;
+  document.getElementById('num').textContent=n;
+  document.getElementById('lbl').textContent=n===1?'Tag Streak':'Tage Streak';
+  document.getElementById('flame').textContent=st==='done'?'🔥':(n>0?'🔥':'○');
+  document.getElementById('mascot').textContent=FACE[st].m;
+  document.getElementById('speech').textContent=pick(FACE[st].t);
+
+  // Wochenleiste (Mo–So)
+  const wk=document.getElementById('week');wk.innerHTML='';
+  const now=new Date(),dow=(now.getDay()+6)%7;
+  const names=['M','D','M','D','F','S','S'];
+  for(let i=0;i<7;i++){
+    const d=addDays(now,i-dow),k=iso(d),on=dayDone(k),is=k===today();
+    wk.innerHTML+=`<div class="day"><div class="d">${names[i]}</div><div class="dot${on?' on':''}${is?' today':''}">${on?'✓':''}</div></div>`;
+  }
+
+  // Aktionen
+  const d=S.days[today()]||{};
+  document.querySelectorAll('.act').forEach(b=>{
+    b.classList.toggle('done',!!d[b.dataset.k]);
+  });
+
+  // Stats
+  document.getElementById('sBest').textContent=Math.max(best(),n);
+  document.getElementById('sTotal').textContent=Object.keys(S.days).filter(dayDone).length;
+  let w=0;for(let i=0;i<7;i++){const dd=addDays(now,i-dow);if(dd<=now&&dayDone(iso(dd)))w++}
+  document.getElementById('sWeek').textContent=w;
+
+  // Historie 28 Tage: verpasste Tage (seit erstem Nutzungstag, vor heute) rot
+  const g=document.getElementById('grid');g.innerHTML='';
+  const tk=today();
+  for(let i=27;i>=0;i--){
+    const k=iso(addDays(now,-i));
+    const cls=dayDone(k)?' on':(k<tk&&k>=S.start?' miss':'');
+    g.innerHTML+=`<div class="cell${cls}"></div>`;
+  }
+  countdown();
+}
+
+/* Gestaffelter Countdown (Duolingo-Prinzip), aber auf DEIN Fenster gemappt:
+   Ziel-Uhrzeit ist 21:00 (Ruhezeit), Stufen 2 h / 1 h / 30 min davor.
+   Ab 21 Uhr: stiller Countdown bis Mitternacht, kein Alarm mehr. */
+function countdown(){
+  const now=new Date();
+  const el=document.getElementById('count'),v=document.getElementById('countVal'),
+        lab=document.getElementById('countLab'),icon=document.getElementById('countIcon');
+  if(dayDone(today())){
+    el.className='count';
+    lab.textContent='Heute erledigt';
+    v.textContent='✓';
+    icon.textContent='✅';
+    return;
+  }
+  const h=now.getHours()+now.getMinutes()/60;
+  let end=new Date();
+  if(h>=19&&h<21)end.setHours(21,0,0,0);   // im Fenster: Countdown bis Ruhezeit
+  else end.setHours(24,0,0,0);             // sonst: bis Mitternacht
+  const ms=end-now,hh=Math.floor(ms/3.6e6),mm=Math.floor(ms%3.6e6/6e4),ss=Math.floor(ms%6e4/1000);
+  v.textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+  if(h>=21){el.className='count calm';lab.textContent='Ruhemodus · zählt bis 24:00';icon.textContent='🌙'}
+  else if(h>=20.5){el.className='count crit';lab.textContent='🚨 30 Minuten bis Ruhezeit';icon.textContent='🚨'}
+  else if(h>=20){el.className='count crit';lab.textContent='Noch 1 Stunde bis Ruhezeit';icon.textContent='⏰'}
+  else if(h>=19){el.className='count hot';lab.textContent='Dein Fenster läuft · bis 21:00';icon.textContent='⏰'}
+  else{el.className='count';lab.textContent='Zeit bis Mitternacht';icon.textContent='⏳'}
+}
+
+document.querySelectorAll('.act').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const k=today();S.days[k]=S.days[k]||{};
+    S.days[k][b.dataset.k]=!S.days[k][b.dataset.k];
+    save(S);render();
+    if(navigator.vibrate)navigator.vibrate(18);
+  });
+});
+
+document.getElementById('reset').addEventListener('click',()=>{
+  if(confirm('Wirklich alles löschen? Streak und Historie sind dann weg.')){
+    localStorage.removeItem(KEY);S=load();render();
+  }
+});
+
+render();
+setInterval(countdown,1000);
+setInterval(render,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+</script>
+</body>
+</html>
