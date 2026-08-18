@@ -336,6 +336,8 @@ body.pfx .hero{z-index:12}
 .foot .q{color:var(--dim)}
 .reset{background:none;border:none;color:var(--faint);font-size:11px;text-decoration:underline;
   cursor:pointer;font-family:var(--mono);margin-top:8px;padding:12px;letter-spacing:1px}
+.diag{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;color:var(--faint);margin-top:6px}
+.diag.bad{color:var(--bad)}
 
 /* ---------- BOOT-SEQUENZ (einmalig) ---------- */
 body.boot .panel,body.boot h2,body.boot .stats,body.boot .note,body.boot .backup,body.boot .foot,body.boot .act,body.boot .sys{
@@ -436,7 +438,7 @@ body.boot .bootline{animation:bline .6s .15s ease-out forwards}
   <h2>Heute erledigen — alle vier<span class="prog" id="prog"></span></h2>
   <button class="act" data-k="snipe"><span class="idx">01</span><span class="tx">Gesnipet<span class="sub">Gespeicherte Suche geprüft, 30-Sek-Check gemacht</span></span><span class="chk">OFFEN</span></button>
   <button class="act" data-k="offer"><span class="idx">02</span><span class="tx">Angebot rausgeschickt<span class="sub">Mindestens ein Preisvorschlag</span></span><span class="chk">OFFEN</span></button>
-  <button class="act" data-k="list"><span class="idx">03</span><span class="tx">Teil gelistet<span class="sub">Tageslichtbild zuerst, Maße in cm</span></span><span class="chk">OFFEN</span></button>
+  <button class="act" data-k="list"><span class="idx">03</span><span class="tx">Teil gelistet oder eingekauft<span class="sub">Listing mit Tageslichtbild + Maße — oder ein Teil gekauft</span></span><span class="chk">OFFEN</span></button>
   <button class="act" data-k="excel"><span class="idx">04</span><span class="tx">Excel aktualisiert<span class="sub">Excel ist die einzige Wahrheit für Zahlen</span></span><span class="chk">OFFEN</span></button>
 
   <div class="note">Der Tag zählt erst bei <b>4 / 4</b>. Gotham steht — oder es steht nicht.</div>
@@ -493,6 +495,7 @@ body.boot .bootline{animation:bline .6s .15s ease-out forwards}
     <span class="q">„Ich habe kein Disziplin-Problem.<br>Ich habe ein Struktur-Problem."</span><br>
     <span style="opacity:.7">Struktur zuerst, Mindset folgt.</span><br>
     <button class="reset" id="reset">Alles zurücksetzen</button>
+    <div class="diag" id="diag">SPEICHER: —</div>
   </div>
 </div>
 
@@ -854,24 +857,54 @@ function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
 function dayNum(d){return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5)}
 
 /* Laden + Migration: Struktur {days:{}}, Feld "start" wird bei Bedarf ergänzt */
+/* Speicher-Diagnose: sichtbar ganz unten, damit stilles Scheitern auffällt */
+let storageOK=true,lastSave='',loadFail=false;
+function diag(){
+  const d=document.getElementById('diag');if(!d)return;
+  d.textContent=storageOK?('SPEICHER: OK'+(lastSave?' · ZULETZT '+lastSave:'')):'SPEICHER: FEHLER';
+  d.classList.toggle('bad',!storageOK);
+}
 function load(){
-  let s;
-  try{s=JSON.parse(localStorage.getItem(KEY))||{days:{}}}catch(e){s={days:{}}}
+  let raw=null,readFail=false;
+  try{raw=localStorage.getItem(KEY)}catch(e){readFail=true}
+  let s=null;
+  if(raw!==null&&raw!==''){
+    try{s=JSON.parse(raw)}catch(e){readFail=true}
+  }
+  if(!s||typeof s!=='object'){
+    /* Default NUR, wenn wirklich nichts (Gültiges) gespeichert ist.
+       Bei Lese-/Parse-Fehlern: Default nur im Speicher, NIE zurückschreiben —
+       sonst überschreibt jeder App-Start den echten Stand. */
+    s={days:{}};
+    if(readFail){storageOK=false;loadFail=true}
+  }
   if(!s.days)s.days={};
+  let changed=false;
   if(!s.start){
     const ks=Object.keys(s.days).sort();
     s.start=ks.length?ks[0]:iso(new Date());
-    save(s);
+    changed=true;
   }
   /* Migration 4/4-Regel: Tage vor diesem Datum gelten nach der alten
-     Regel (eine Aktion genügt), ab diesem Datum zählen nur 4/4-Tage. */
+     Regel (eine Aktion genügt), ab diesem Datum zählen nur 4/4-Tage.
+     Migration ergänzt Felder — sie verwirft nie geladene Daten. */
   if(!s.rule4Since){
     s.rule4Since=iso(new Date());
-    save(s);
+    changed=true;
   }
+  if(changed&&!readFail)save(s);
+  diag();
   return s;
 }
-function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
+function save(s){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(s));
+    storageOK=true;loadFail=false;
+    const n=new Date();
+    lastSave=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+  }catch(e){storageOK=false}
+  diag();
+}
 
 let S=load();
 const today=()=>iso(new Date());
@@ -1368,7 +1401,13 @@ document.body.classList.add('boot');
 setTimeout(()=>swarm({count:12,subtle:true}),950);
 setInterval(countdown,1000);
 setInterval(render,60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+/* iOS beendet Homescreen-Apps im Hintergrund hart: beim Verlassen sichern.
+   Ausnahme loadFail: unlesbare Alt-Daten nie passiv mit dem Default plätten —
+   erst wieder speichern, wenn der Nutzer aktiv etwas geändert hat. */
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){if(!loadFail)save(S)}else render();
+});
+window.addEventListener('pagehide',()=>{if(!loadFail)save(S)});
 </script>
 </body>
 </html>
