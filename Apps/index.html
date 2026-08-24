@@ -289,6 +289,31 @@ h2::before{content:'// ';color:var(--faint);white-space:pre}
 .barea .bbtn{margin-top:8px;width:100%}
 .bmsg{font-family:var(--mono);font-size:10.5px;color:var(--cyan);letter-spacing:1px;margin-top:8px;min-height:13px}
 
+/* ---------- BACKUP-CODE ---------- */
+.bkban{display:none;align-items:center;gap:10px;background:rgba(255,59,48,.14);
+  border:1px solid rgba(255,59,48,.55);border-radius:4px;padding:10px 12px;margin-bottom:10px}
+.bkban.on{display:flex}
+.bkban .bt{flex:1;font-family:var(--mono);font-size:11px;color:#ffb3ae;letter-spacing:1px;line-height:1.45}
+.bkban .bb{background:none;border:1px solid rgba(255,59,48,.6);color:#ff8f88;border-radius:3px;
+  font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:12px 10px;cursor:pointer;
+  min-height:44px;flex-shrink:0;text-transform:uppercase;touch-action:manipulation}
+.bkline{font-family:var(--mono);font-size:9.5px;letter-spacing:1.2px;color:var(--faint);padding:0 2px 10px}
+.bkline.warn{color:var(--amber)}
+.bk{margin-top:22px}
+.bknote{font-size:11.5px;color:var(--dim);line-height:1.55;margin-bottom:8px;padding:0 2px}
+.bkta{width:100%;height:96px;background:#0a1016;border:1px solid var(--line);border-radius:4px;
+  color:var(--txt);font-family:var(--mono);font-size:11px;padding:10px;resize:vertical;
+  word-break:break-all;-webkit-user-select:text;user-select:text}
+.bkta:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 12px -6px var(--cyan)}
+.bk .bbtn{width:100%;margin-top:8px}
+.bk .bbtn.danger{border-color:rgba(255,75,75,.6);color:#ff8f88}
+.bksub{font-family:var(--mono);font-size:10.5px;letter-spacing:1.8px;color:var(--dim);
+  margin:20px 0 8px;text-transform:uppercase}
+.bksub::before{content:'// ';color:var(--faint)}
+.bkmsg{font-family:var(--mono);font-size:10.5px;color:var(--cyan);letter-spacing:1px;
+  margin-top:8px;min-height:13px;line-height:1.5}
+.bkmsg.bad{color:var(--bad)}
+
 /* ---------- PERFEKTER TAG (grosse Sequenz) ---------- */
 #pfx{position:fixed;inset:0;z-index:10;pointer-events:none;display:none}
 #pfx .pfx-dim{position:absolute;inset:0;background:rgba(2,4,7,.62);opacity:0;transition:opacity .3s}
@@ -367,7 +392,17 @@ body.boot .bootline{animation:bline .6s .15s ease-out forwards}
 <div class="edge top"></div><div class="edge bot"></div>
 <div class="wrap">
 
+  <div class="bkban" id="errban">
+    <span class="bt">DATEN KONNTEN NICHT GELESEN WERDEN. BITTE BACKUP-CODE EINFÜGEN.</span>
+    <button class="bb" id="errJump">Zum Backup</button>
+  </div>
+  <div class="bkban" id="bkban">
+    <span class="bt">BACKUP FÄLLIG</span>
+    <button class="bb" id="bkJump">Zum Backup</button>
+  </div>
+
   <div class="sys"><span>VV-TERMINAL</span><b id="since">TAG — SEIT NEUSTART</b></div>
+  <div class="bkline" id="bkline">LETZTES BACKUP: —</div>
 
   <section class="hero panel" id="hero">
     <span class="crn tl"></span><span class="crn tr"></span><span class="crn bl"></span><span class="crn br"></span>
@@ -491,6 +526,20 @@ body.boot .bootline{animation:bline .6s .15s ease-out forwards}
     </div>
   </div>
 
+  <div class="bk" id="bk">
+    <h2>Backup</h2>
+    <div class="bknote">Dieser Code enthält deinen kompletten Stand. Vor jedem Zurücksetzen des Geräts kopieren und sichern.</div>
+    <textarea class="bkta" id="bkCode" readonly spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    <button class="bbtn" id="bkCopy">Code kopieren</button>
+    <div class="bkmsg" id="bkCopyMsg"></div>
+
+    <div class="bksub">Wiederherstellen</div>
+    <textarea class="bkta" id="bkIn" placeholder="Code einfügen" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    <button class="bbtn" id="bkRestore">Wiederherstellen</button>
+    <button class="bbtn danger" id="bkConfirm" style="display:none">Ja, überschreiben</button>
+    <div class="bkmsg" id="bkMsg"></div>
+  </div>
+
   <div class="foot">
     <span class="q">„Ich habe kein Disziplin-Problem.<br>Ich habe ein Struktur-Problem."</span><br>
     <span style="opacity:.7">Struktur zuerst, Mindset folgt.</span><br>
@@ -546,6 +595,8 @@ body.boot .bootline{animation:bline .6s .15s ease-out forwards}
 
 <script>
 const KEY='vv_business_streak_v1';
+const MKEY=KEY+'_mirror';       // Zweitschrift, falls der Hauptkey kaputtgeht
+const BKEY=KEY+'_lastbackup';   // Zeitpunkt des letzten Backup-Kopierens
 const ACTS=['snipe','offer','list','excel'];
 const RESTART='2026-08-17'; // fest: Neustart des Business
 
@@ -858,26 +909,37 @@ function dayNum(d){return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.get
 
 /* Laden + Migration: Struktur {days:{}}, Feld "start" wird bei Bedarf ergänzt */
 /* Speicher-Diagnose: sichtbar ganz unten, damit stilles Scheitern auffällt */
-let storageOK=true,lastSave='',loadFail=false;
+let storageOK=true,lastSave='',loadFail=false,loadedFrom='HAUPT';
+function hhmm(d){return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function diag(){
   const d=document.getElementById('diag');if(!d)return;
-  d.textContent=storageOK?('SPEICHER: OK'+(lastSave?' · ZULETZT '+lastSave:'')):'SPEICHER: FEHLER';
+  d.textContent=storageOK
+    ?('SPEICHER: OK · QUELLE '+loadedFrom+(lastSave?' · ZULETZT '+lastSave:''))
+    :'SPEICHER: FEHLER';
   d.classList.toggle('bad',!storageOK);
 }
+/* Einen Key lesen: {state} | {empty} | {fail} */
+function readKey(k){
+  let raw=null;
+  try{raw=localStorage.getItem(k)}catch(e){return {fail:true}}
+  if(raw===null||raw==='')return {empty:true};
+  try{
+    const o=JSON.parse(raw);
+    if(o&&typeof o==='object'&&o.days&&typeof o.days==='object')return {state:o};
+    return {fail:true};
+  }catch(e){return {fail:true}}
+}
 function load(){
-  let raw=null,readFail=false;
-  try{raw=localStorage.getItem(KEY)}catch(e){readFail=true}
-  let s=null;
-  if(raw!==null&&raw!==''){
-    try{s=JSON.parse(raw)}catch(e){readFail=true}
+  const a=readKey(KEY),b=readKey(MKEY);
+  let s=null,forceWrite=false;
+  if(a.state){s=a.state;loadedFrom='HAUPT'}
+  else if(b.state){s=b.state;loadedFrom='MIRROR';forceWrite=true} // Hauptkey kaputt → aus Mirror
+  else if(a.fail||b.fail){
+    /* Beide unlesbar: NICHT still mit leerem Objekt starten und nichts
+       überschreiben, bis der Nutzer per Backup-Code entscheidet. */
+    s={days:{}};storageOK=false;loadFail=true;loadedFrom='—';
   }
-  if(!s||typeof s!=='object'){
-    /* Default NUR, wenn wirklich nichts (Gültiges) gespeichert ist.
-       Bei Lese-/Parse-Fehlern: Default nur im Speicher, NIE zurückschreiben —
-       sonst überschreibt jeder App-Start den echten Stand. */
-    s={days:{}};
-    if(readFail){storageOK=false;loadFail=true}
-  }
+  if(!s){s={days:{}};loadedFrom='HAUPT'}  // Erstnutzung: beide leer
   if(!s.days)s.days={};
   let changed=false;
   if(!s.start){
@@ -892,18 +954,46 @@ function load(){
     s.rule4Since=iso(new Date());
     changed=true;
   }
-  if(changed&&!readFail)save(s);
+  if((changed||forceWrite)&&!loadFail)save(s);  // nach Mirror-Rettung beide neu schreiben
   diag();
   return s;
 }
 function save(s){
-  try{
-    localStorage.setItem(KEY,JSON.stringify(s));
-    storageOK=true;loadFail=false;
-    const n=new Date();
-    lastSave=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
-  }catch(e){storageOK=false}
+  let json;
+  try{json=JSON.stringify(s)}catch(e){storageOK=false;diag();return}
+  let ok=false;
+  try{localStorage.setItem(KEY,json);ok=true}catch(e){}
+  try{localStorage.setItem(MKEY,json)}catch(e){}
+  storageOK=ok;
+  if(ok){loadFail=false;if(loadedFrom==='—')loadedFrom='HAUPT';lastSave=hhmm(new Date())}
   diag();
+  updateBkCode(s);
+}
+
+/* ---------- BACKUP-CODE: VVBS1: + Base64(JSON) ---------- */
+function b64enc(str){
+  try{
+    const by=new TextEncoder().encode(str);
+    let bin='';for(let i=0;i<by.length;i++)bin+=String.fromCharCode(by[i]);
+    return btoa(bin);
+  }catch(e){return btoa(unescape(encodeURIComponent(str)))}
+}
+function b64dec(b64){
+  const bin=atob(b64);
+  try{
+    const by=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)by[i]=bin.charCodeAt(i);
+    return new TextDecoder().decode(by);
+  }catch(e){return decodeURIComponent(escape(bin))}
+}
+function backupCode(st){
+  return 'VVBS1:'+b64enc(JSON.stringify({v:1,ts:iso(new Date()),data:st}));
+}
+function updateBkCode(st){
+  const el=document.getElementById('bkCode');
+  if(!el||!st)return;
+  const c=backupCode(st);
+  if(el.value!==c)el.value=c;
 }
 
 let S=load();
@@ -912,11 +1002,12 @@ const $=id=>document.getElementById(id);
 
 /* Tag gesichert: vor rule4Since genügt eine Aktion (Bestandsschutz),
    ab rule4Since müssen alle vier erfasst sein. */
-function dayDone(k){
-  const d=S.days[k];if(!d)return false;
-  if(S.rule4Since&&k<S.rule4Since)return ACTS.some(a=>d[a]);
+function dayDoneIn(st,k){
+  const d=st.days[k];if(!d)return false;
+  if(st.rule4Since&&k<st.rule4Since)return ACTS.some(a=>d[a]);
   return ACTS.every(a=>d[a]);
 }
+function dayDone(k){return dayDoneIn(S,k)}
 /* Perfekter Tag: alle vier Aktionen erfasst (aus den Tages-Flags abgeleitet,
    gilt damit auch rückwirkend für alte Daten) */
 function dayPerfect(k){const d=S.days[k];return !!(d&&ACTS.every(a=>d[a]))}
@@ -925,12 +1016,13 @@ function todayCount(){const d=S.days[today()]||{};return ACTS.filter(a=>d[a]).le
 function totalActs(){let n=0;for(const k in S.days){const d=S.days[k];for(const a of ACTS)if(d[a])n++}return n}
 
 /* Streak: zählt rückwärts ab heute (heute offen = gestern zählt weiter) */
-function streak(){
+function streakIn(st){
   let n=0,cur=new Date();
-  if(!dayDone(iso(cur))) cur=addDays(cur,-1);
-  while(dayDone(iso(cur))){n++;cur=addDays(cur,-1)}
+  if(!dayDoneIn(st,iso(cur))) cur=addDays(cur,-1);
+  while(dayDoneIn(st,iso(cur))){n++;cur=addDays(cur,-1)}
   return n;
 }
+function streak(){return streakIn(S)}
 function best(){
   const ks=Object.keys(S.days).filter(dayDone).sort();
   if(!ks.length)return 0;
@@ -1047,6 +1139,8 @@ function render(){
     const cls=dayDone(k)?(' on'+(dayPerfect(k)?' perf':'')):(k<tk&&k>=S.start?' miss':'');
     g.innerHTML+=`<div class="cell${cls}"></div>`;
   }
+  updateBkCode(S);
+  renderBackupState();
   countdown();
 }
 
@@ -1352,7 +1446,7 @@ $('impGo').addEventListener('click',()=>{
     $('bmsg').textContent='FEHLER: FORMAT NICHT ERKANNT (FELD "days" FEHLT).';return;
   }
   if(!confirm('Vorhandene Daten werden durch das Backup ersetzt. Fortfahren?'))return;
-  localStorage.setItem(KEY,JSON.stringify(obj));
+  save(obj);
   S=load();render();
   $('barea').classList.remove('open');
   $('bmsg').textContent='BACKUP ÜBERNOMMEN.';
@@ -1376,9 +1470,106 @@ document.querySelectorAll('.rc').forEach(b=>{
   });
 });
 
+/* ---------- BACKUP: kopieren, wiederherstellen, Erinnerung ---------- */
+function lastBackup(){
+  let t=null;try{t=localStorage.getItem(BKEY)}catch(e){}
+  const n=t?parseInt(t,10):0;
+  return (n&&isFinite(n))?n:0;
+}
+function renderBackupState(){
+  const t=lastBackup(),line=$('bkline');
+  if(!line)return;
+  if(t){
+    const d=new Date(t);
+    line.textContent='LETZTES BACKUP: '+String(d.getDate()).padStart(2,'0')+'.'+
+      String(d.getMonth()+1).padStart(2,'0')+'. '+hhmm(d);
+  }else line.textContent='LETZTES BACKUP: NIE';
+  const due=!t||(Date.now()-t)>3*864e5;
+  line.classList.toggle('warn',due);
+  $('bkban').classList.toggle('on',due&&!loadFail);
+  $('errban').classList.toggle('on',loadFail);
+}
+/* Kopieren mit execCommand-Fallback für altes iOS-Safari */
+function copyFrom(el,txt){
+  let ok=false;
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt);ok=true}}catch(e){}
+  if(!ok){
+    try{
+      el.contentEditable='true';el.readOnly=false;
+      const r=document.createRange();r.selectNodeContents(el);
+      const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);
+      el.setSelectionRange(0,999999);
+      ok=document.execCommand('copy');
+    }catch(e){}
+    finally{el.contentEditable='false';el.readOnly=true}
+  }
+  return ok;
+}
+$('bkCopy').addEventListener('click',()=>{
+  const el=$('bkCode'),msg=$('bkCopyMsg');
+  updateBkCode(S);
+  const ok=copyFrom(el,el.value);
+  if(ok){
+    try{localStorage.setItem(BKEY,String(Date.now()))}catch(e){}
+    renderBackupState();
+    msg.classList.remove('bad');
+    msg.textContent='KOPIERT. Code in Obsidian einfügen unter Apps/Streak-Backup.md';
+  }else{
+    el.focus();el.select();
+    msg.classList.add('bad');
+    msg.textContent='KOPIEREN BLOCKIERT. TEXT IST MARKIERT — MANUELL KOPIEREN, DANN NOCHMAL TIPPEN.';
+  }
+});
+
+/* Code prüfen: Prefix → Base64 → JSON. Fehler ändern den Zustand nie. */
+function parseCode(txt){
+  const t=(txt||'').trim();
+  if(!t)return{err:'FEHLER: KEIN CODE EINGEFÜGT.'};
+  if(t.slice(0,6)!=='VVBS1:')return{err:'FEHLER: PREFIX „VVBS1:" FEHLT — DAS IST KEIN BACKUP-CODE.'};
+  let json;
+  try{json=b64dec(t.slice(6).replace(/\s+/g,''))}catch(e){return{err:'FEHLER: CODE UNVOLLSTÄNDIG ODER BESCHÄDIGT.'}}
+  let obj;
+  try{obj=JSON.parse(json)}catch(e){return{err:'FEHLER: INHALT NICHT LESBAR.'}}
+  const st=(obj&&obj.data&&typeof obj.data==='object')?obj.data:obj;
+  if(!st||typeof st!=='object'||!st.days||typeof st.days!=='object')
+    return{err:'FEHLER: FORMAT NICHT ERKANNT (FELD „days" FEHLT).'};
+  return{state:st,ts:(obj&&obj.ts)||''};
+}
+let bkPending=null;
+$('bkRestore').addEventListener('click',()=>{
+  const msg=$('bkMsg'),res=parseCode($('bkIn').value);
+  if(res.err){
+    bkPending=null;$('bkConfirm').style.display='none';
+    msg.classList.add('bad');msg.textContent=res.err;
+    return;                       // bestehender Zustand bleibt unangetastet
+  }
+  const st=res.state;
+  if(!st.start){const ks=Object.keys(st.days).sort();st.start=ks.length?ks[0]:iso(new Date())}
+  if(!st.rule4Since)st.rule4Since=iso(new Date());
+  bkPending=st;
+  const d=res.ts&&/^\d{4}-\d{2}-\d{2}/.test(res.ts)
+    ? res.ts.slice(8,10)+'.'+res.ts.slice(5,7)+'.'+res.ts.slice(0,4) : 'unbekannt';
+  const n=streakIn(st),y=Object.keys(st.days).filter(k=>dayDoneIn(st,k)).length;
+  msg.classList.remove('bad');
+  msg.textContent='Backup vom '+d+', '+n+' Tage Streak, '+y+' erfasste Tage. Wirklich übernehmen?';
+  $('bkConfirm').style.display='block';
+});
+$('bkConfirm').addEventListener('click',()=>{
+  if(!bkPending)return;
+  S=bkPending;bkPending=null;
+  save(S);render();
+  $('bkConfirm').style.display='none';
+  $('bkIn').value='';
+  const msg=$('bkMsg');msg.classList.remove('bad');
+  msg.textContent='WIEDERHERGESTELLT. '+streak()+' TAGE STREAK.';
+});
+$('bkJump').addEventListener('click',()=>$('bk').scrollIntoView({behavior:'smooth',block:'start'}));
+$('errJump').addEventListener('click',()=>$('bk').scrollIntoView({behavior:'smooth',block:'start'}));
+
 $('reset').addEventListener('click',()=>{
   if(confirm('Wirklich alles löschen? Streak und Historie sind dann weg.')){
-    localStorage.removeItem(KEY);S=load();render();
+    try{localStorage.removeItem(KEY);localStorage.removeItem(MKEY)}catch(e){}
+    S=load();render();
   }
 });
 
